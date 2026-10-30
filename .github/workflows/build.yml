@@ -2016,11 +2016,7 @@ jobs:
      
       # 8. 開始編譯
       - name: Build firmware
-        run: |
-          echo "::group::Build Process"
-          cp build.config padavan-ng/trunk/.config
-          cd padavan-ng/trunk
-                - name: Build firmware
+
         run: |
           echo "::group::Build Process"
           cp build.config padavan-ng/trunk/.config
