@@ -2013,7 +2013,6 @@ jobs:
           echo "===== BUILD CONFIG VENDOR ====="
           grep -E "CONFIG_VENDOR|CONFIG_FIRMWARE_PRODUCT_ID" build.config
 
-
       # 8. 開始編譯
       - name: Build firmware
         run: |
