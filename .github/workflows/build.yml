@@ -2020,7 +2020,37 @@ jobs:
           echo "::group::Build Process"
           cp build.config padavan-ng/trunk/.config
           cd padavan-ng/trunk
-          
+                - name: Build firmware
+        run: |
+          echo "::group::Build Process"
+          cp build.config padavan-ng/trunk/.config
+          cd padavan-ng/trunk
+
+          echo "===== CONFIGURATION BEFORE BUILD ====="
+
+          echo "--- Selected board ---"
+          grep -E 'CONFIG_VENDOR=|CONFIG_FIRMWARE_PRODUCT_ID=' .config
+
+          echo "--- Board kernel config ---"
+          grep -nE 'CONFIG_(NET_CLS_ACT|NET_ACT_MIRRED|IFB|NET_SCH_INGRESS|NET_SCH_CAKE)=' \
+            configs/boards/XIAOMI-U-Boot/MI-MINI/kernel-3.4.x.config
+
+          echo "--- Kernel .config before build ---"
+          if [ -f linux-3.4.x/.config ]; then
+            grep -nE 'CONFIG_(NET_CLS_ACT|NET_ACT_MIRRED|IFB|NET_SCH_INGRESS|NET_SCH_CAKE)=' \
+              linux-3.4.x/.config || true
+          else
+            echo "linux-3.4.x/.config does not exist yet"
+          fi
+
+          echo "===== END CONFIGURATION BEFORE BUILD ====="
+
+          ./clear_tree.sh > /dev/null 2>&1
+          rm -rf tmp staging
+
+          echo "Starting build... Logs will be saved to build.log"
+          set -o pipefail
+          ./build_firmware.sh 2>&1 | tee build.log
           ./clear_tree.sh > /dev/null 2>&1
           rm -rf tmp staging
           
