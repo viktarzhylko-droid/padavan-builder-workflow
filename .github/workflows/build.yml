@@ -2047,7 +2047,20 @@ jobs:
           echo "Starting build... Logs will be saved to build.log"
           set -o pipefail
           ./build_firmware.sh 2>&1 | tee build.log
+          echo ""
+          echo "===== 24. CONFIG AFTER BUILD ====="
 
+          echo "--- Final kernel config ---"
+          grep -nE 'CONFIG_(NET_SCHED|NET_CLS|NET_CLS_ACT|NET_ACT_MIRRED|IFB|NET_SCH_INGRESS|NET_SCH_CAKE)=' \
+            linux-3.4.x/.config || true
+
+          echo "--- NET_CLS_ACT references in kernel config files ---"
+          grep -R -n 'CONFIG_NET_CLS_ACT' \
+            configs/boards/XIAOMI \
+            configs/boards/XIAOMI-U-Boot \
+            linux-3.4.x/.config 2>/dev/null || true
+
+          echo "===== END CONFIG 24 ====="
           echo ""
           echo "=================================================="
           echo "        FULL CAKE / IFB DIAGNOSTICS"
