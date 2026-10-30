@@ -1877,16 +1877,22 @@ jobs:
           
           TARGET_BOARD="${{ inputs.target_select }}"
           BOARDS_DIR="padavan-ng/trunk/configs/boards"
-          
-          # 3.4 內核的目錄結構較深 (例如 boards/ASUS/RT-N56U)，使用 find 尋找
-          echo "🔍 Searching for config file for board: $TARGET_BOARD..."
-          CONFIG_PATH=$(find "$BOARDS_DIR" -name "kernel-3.4.x.config" | grep "/$TARGET_BOARD/" | head -n 1)
 
-          if [ -z "$CONFIG_PATH" ]; then
-             echo "⚠️  Direct match not found, trying loose search..."
-             # 備用搜尋：有些機型目錄可能不完全等於 target_select (雖然很少見)
-             CONFIG_PATH=$(find "$BOARDS_DIR" -type f -name "kernel-3.4.x.config" | grep "$TARGET_BOARD" | head -n 1)
+          # Read the exact board vendor selected in build.config.
+          TARGET_VENDOR=$(sed -n 's/^CONFIG_VENDOR=//p' build.config | head -n 1 | tr -d '"' | tr -d '\r')
+
+          if [ -z "$TARGET_VENDOR" ]; then
+            echo "❌ ERROR: CONFIG_VENDOR is missing from build.config"
+            exit 1
           fi
+
+          # Select the exact kernel config for this vendor and board.
+          CONFIG_PATH="$BOARDS_DIR/$TARGET_VENDOR/$TARGET_BOARD/kernel-3.4.x.config"
+
+          echo "===== SELECTED BOARD CONFIG ====="
+          echo "Vendor: $TARGET_VENDOR"
+          echo "Board: $TARGET_BOARD"
+          echo "Config: $CONFIG_PATH"
 
           if [ -f "$CONFIG_PATH" ]; then
             echo "🎯 Found Config: $CONFIG_PATH"
