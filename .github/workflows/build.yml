@@ -1972,33 +1972,50 @@ jobs:
           fi
           echo "::endgroup::"
 
-      - name: 🔍 Diagnose CAKE integration
+      
+      - name: 🔍 Diagnose CAKE and IFB integration
         run: |
           echo "===== BOARD CONFIGS ====="
           find padavan-ng/trunk/configs/boards \
             -path "*/MI-MINI/kernel-3.4.x.config" -print
 
-          echo "===== CAKE SOURCE FILES ====="
+          echo "===== TRAFFIC CONTROL SOURCE FILES ====="
           find padavan-ng/trunk/linux-3.4.x \
-            \( -iname '*cake*' -o -iname '*cobalt*' \) -print
+            \( -iname '*cake*' -o -iname '*cobalt*' \
+               -o -iname '*ifb*' -o -iname '*mirred*' \
+               -o -iname '*ingress*' \) -print
+
+          echo "===== KERNEL CONFIG OPTIONS ====="
+          grep -n -E 'CONFIG_(NET_SCH_CAKE|NET_SCH_FQ_CODEL|IFB|NET_CLS_ACT|NET_ACT_MIRRED|NET_SCH_INGRESS)' \
+            padavan-ng/trunk/configs/boards/*/MI-MINI/kernel-3.4.x.config || true
 
           echo "===== CAKE KCONFIG ====="
           grep -n -C 5 "NET_SCH_CAKE" \
             padavan-ng/trunk/linux-3.4.x/net/sched/Kconfig || true
 
-          echo "===== CAKE MAKEFILE ====="
-          grep -n -C 3 "sch_cake" \
-            padavan-ng/trunk/linux-3.4.x/net/sched/Makefile || true
+          echo "===== IFB KCONFIG ====="
+          grep -n -C 5 "config IFB" \
+            padavan-ng/trunk/linux-3.4.x/drivers/net/Kconfig || true
 
-          echo "===== BOARD CONFIG CONTENT ====="
-          find padavan-ng/trunk/configs/boards \
-            -path "*/MI-MINI/kernel-3.4.x.config" -print | while IFS= read -r f; do
-              echo "--- $f"
-              grep -E "NET_SCH_(CAKE|FQ_CODEL)" "$f" || true
-            done
+          echo "===== MIRRED KCONFIG ====="
+          grep -n -C 5 "NET_ACT_MIRRED" \
+            padavan-ng/trunk/linux-3.4.x/net/sched/Kconfig || true
+
+          echo "===== INGRESS KCONFIG ====="
+          grep -n -C 5 "NET_SCH_INGRESS" \
+            padavan-ng/trunk/linux-3.4.x/net/sched/Kconfig || true
+
+          echo "===== MAKEFILE ENTRIES ====="
+          grep -n -E 'sch_cake|sch_ingress|act_mirred|ifb' \
+            padavan-ng/trunk/linux-3.4.x/net/sched/Makefile \
+            padavan-ng/trunk/linux-3.4.x/drivers/net/Makefile || true
 
           echo "===== BUILD CONFIG VENDOR ====="
           grep -E "CONFIG_VENDOR|CONFIG_FIRMWARE_PRODUCT_ID" build.config
+
+      # 8. 開始編譯
+      - name: Build firmware
+
 
       # 8. 開始編譯
       - name: Build firmware
