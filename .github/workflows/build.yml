@@ -1939,10 +1939,23 @@ jobs:
             set_kernel_config CONFIG_IFB m
             set_kernel_config CONFIG_NET_SCH_INGRESS m
 
-            echo "===== IFB CONFIGURATION ====="
-            grep -E 'CONFIG_(IFB|NET_CLS_ACT|NET_ACT_MIRRED|NET_SCH_INGRESS)' "$CONFIG_PATH"
+                        echo "===== IFB CONFIGURATION ====="
 
-            echo "✅ IFB configuration patch applied."
+            grep -E '^(CONFIG_IFB=m|CONFIG_NET_CLS_ACT=y|CONFIG_NET_ACT_MIRRED=m|CONFIG_NET_SCH_INGRESS=m)$' "$CONFIG_PATH"
+
+            for EXPECTED in \
+              "CONFIG_IFB=m" \
+              "CONFIG_NET_CLS_ACT=y" \
+              "CONFIG_NET_ACT_MIRRED=m" \
+              "CONFIG_NET_SCH_INGRESS=m"; do
+
+              if ! grep -qx "$EXPECTED" "$CONFIG_PATH"; then
+                echo "❌ Missing or incorrect kernel option: $EXPECTED"
+                exit 1
+              fi
+            done
+
+            echo "✅ All IFB configuration options verified."
 
             # 再次驗證 (★ 最終驗證同步相容 =y 或 =m)
             if grep -qE "CONFIG_NET_SCH_CAKE=[ym]" "$CONFIG_PATH"; then
