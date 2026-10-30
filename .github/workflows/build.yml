@@ -2028,13 +2028,146 @@ jobs:
           set -o pipefail
           ./build_firmware.sh 2>&1 | tee build.log
 
-          echo "===== VERIFY CAKE AND IFB MODULES ====="
-          find . -type f \
-            \( -name "sch_cake.ko" \
-            -o -name "ifb.ko" \
-            -o -name "act_mirred.ko" \
-            -o -name "sch_ingress.ko" \) -print
-          echo "===== MODULE CHECK FINISHED ====="
+          echo ""
+          echo "=================================================="
+          echo "        FULL CAKE / IFB DIAGNOSTICS"
+          echo "=================================================="
+
+          echo ""
+          echo "===== 1. BUILD CONFIGURATION ====="
+          grep -E 'CONFIG_VENDOR=|CONFIG_FIRMWARE_PRODUCT_ID=' .config || true
+
+          echo ""
+          echo "===== 2. KERNEL CONFIG FILES ====="
+          find . -type f \( -name ".config" -o -name "kernel-3.4.x.config" \) \
+            -print 2>/dev/null
+
+          echo ""
+          echo "===== 3. FINAL KERNEL CONFIG VALUES ====="
+          find . -type f -name ".config" -print 2>/dev/null | while read config; do
+            echo "--- $config ---"
+            grep -E '^(CONFIG_MODULES|CONFIG_NET_SCHED|CONFIG_NET_CLS_ACT|CONFIG_NET_ACT_MIRRED|CONFIG_IFB|CONFIG_NET_SCH_INGRESS|CONFIG_NET_SCH_CAKE|CONFIG_NETFILTER|CONFIG_BRIDGE_NETFILTER)=|^# CONFIG_(MODULES|NET_SCHED|NET_CLS_ACT|NET_ACT_MIRRED|IFB|NET_SCH_INGRESS|NET_SCH_CAKE) is not set' "$config" || true
+          done
+
+          echo ""
+          echo "===== 4. BOARD KERNEL CONFIG VALUES ====="
+          for config in \
+            configs/boards/XIAOMI/MI-MINI/kernel-3.4.x.config \
+            configs/boards/XIAOMI-U-Boot/MI-MINI/kernel-3.4.x.config; do
+            if [ -f "$config" ]; then
+              echo "--- $config ---"
+              grep -E 'CONFIG_(MODULES|NET_SCHED|NET_CLS_ACT|NET_ACT_MIRRED|IFB|NET_SCH_INGRESS|NET_SCH_CAKE)=' "$config" || true
+            fi
+          done
+
+          echo ""
+          echo "===== 5. KERNEL SOURCE FILES ====="
+          for file in \
+            linux-3.4.x/drivers/net/ifb.c \
+            linux-3.4.x/net/sched/act_mirred.c \
+            linux-3.4.x/net/sched/sch_ingress.c \
+            linux-3.4.x/net/sched/sch_cake.c; do
+            if [ -f "$file" ]; then
+              echo "FOUND: $file"
+            else
+              echo "MISSING: $file"
+            fi
+          done
+
+          echo ""
+          echo "===== 6. KERNEL MAKEFILE RULES ====="
+          grep -nE 'CONFIG_(IFB|NET_ACT_MIRRED|NET_SCH_INGRESS|NET_SCH_CAKE)' \
+            linux-3.4.x/drivers/net/Makefile \
+            linux-3.4.x/net/sched/Makefile 2>/dev/null || true
+
+          echo ""
+          echo "===== 7. KERNEL BUILD ARTIFACTS ====="
+          find linux-3.4.x -type f \( \
+            -name "ifb.o" -o -name "ifb.ko" \
+            -o -name "act_mirred.o" -o -name "act_mirred.ko" \
+            -o -name "sch_ingress.o" -o -name "sch_ingress.ko" \
+            -o -name "sch_cake.o" -o -name "sch_cake.ko" \
+          \) -print 2>/dev/null
+
+          echo ""
+          echo "===== 8. MODULES INSTALLED IN ROMFS ====="
+          if [ -d romfs/lib/modules ]; then
+            find romfs/lib/modules -type f \( \
+              -name "ifb.ko" -o -name "act_mirred.ko" \
+              -o -name "sch_ingress.ko" -o -name "sch_cake.ko" \
+            \) -print
+          else
+            echo "romfs/lib/modules DOES NOT EXIST"
+          fi
+
+          echo ""
+          echo "===== 9. ALL MODULE COPIES IN BUILD TREE ====="
+          find . -type f \( \
+            -name "ifb.ko" -o -name "act_mirred.ko" \
+            -o -name "sch_ingress.ko" -o -name "sch_cake.ko" \
+          \) -print 2>/dev/null
+
+          echo ""
+          echo "===== 10. MODULE DEPENDENCY FILES ====="
+          find . -type f \( \
+            -name "modules.dep" -o -name "modules.order" \
+            -o -name "modules.builtin" -o -name "modules.alias" \
+          \) -print 2>/dev/null
+
+          echo ""
+          echo "===== 11. MODULE DEPENDENCY REFERENCES ====="
+          find . -type f -name "modules.dep" -print 2>/dev/null | while read file; do
+            echo "--- $file ---"
+            grep -Ei 'ifb|mirred|ingress|cake' "$file" || true
+          done
+
+          echo ""
+          echo "===== 12. BUILD LOG: MODULE COMPILATION ====="
+          if [ -f build.log ]; then
+            grep -nEi \
+              'ifb\.o|ifb\.ko|act_mirred|sch_ingress|sch_cake|MODPOST|INSTALL.*\.ko|CC.*\(M\)' \
+              build.log | tail -n 250 || true
+          else
+            echo "build.log NOT FOUND"
+          fi
+
+          echo ""
+          echo "===== 13. BUILD LOG: ERRORS AND WARNINGS ====="
+          if [ -f build.log ]; then
+            grep -nEi \
+              'error:|fatal error:|undefined reference|No rule to make target|modpost:.*error|warning:.*(ifb|mirred|ingress|cake)' \
+              build.log | tail -n 150 || true
+          fi
+
+          echo ""
+          echo "===== 14. MODULE INSTALLATION LOG ====="
+          if [ -f build.log ]; then
+            grep -nEi \
+              'modules_install|INSTALL.*(ifb|mirred|ingress|cake)|DEPMOD|depmod|romfs.*modules' \
+              build.log | tail -n 150 || true
+          fi
+
+          echo ""
+          echo "===== 15. FIRMWARE OUTPUT FILES ====="
+          find . -maxdepth 4 -type f \( \
+            -iname "*.trx" -o -iname "*.bin" -o -iname "*.img" \
+            -o -iname "*.zip" \
+          \) -printf '%p (%s bytes)\n' 2>/dev/null | tail -n 100
+
+          echo ""
+          echo "===== 16. AVAILABLE MODULE INSPECTION TOOLS ====="
+          for tool in modinfo depmod nm readelf; do
+            if command -v "$tool" >/dev/null 2>&1; then
+              echo "$tool: $(command -v "$tool")"
+            else
+              echo "$tool: NOT AVAILABLE"
+            fi
+          done
+
+          echo ""
+          echo "=================================================="
+          echo "        END OF FULL CAKE / IFB DIAGNOSTICS"
+          echo "=================================================="
 
           echo "::endgroup::"
 
