@@ -1915,6 +1915,35 @@ jobs:
               fi
             fi
             
+            # =======================================================
+            # Enable IFB and ingress traffic redirection for SQM
+            # =======================================================
+
+            set_kernel_config() {
+              KEY="$1"
+              VALUE="$2"
+
+              if grep -q "^${KEY}=" "$CONFIG_PATH"; then
+                sed -i "s|^${KEY}=.*|${KEY}=${VALUE}|" "$CONFIG_PATH"
+              elif grep -q "^# ${KEY} is not set" "$CONFIG_PATH"; then
+                sed -i "s|^# ${KEY} is not set|${KEY}=${VALUE}|" "$CONFIG_PATH"
+              else
+                echo "${KEY}=${VALUE}" >> "$CONFIG_PATH"
+              fi
+            }
+
+            echo "🔧 Enabling IFB and ingress support..."
+
+            set_kernel_config CONFIG_NET_CLS_ACT y
+            set_kernel_config CONFIG_NET_ACT_MIRRED m
+            set_kernel_config CONFIG_IFB m
+            set_kernel_config CONFIG_NET_SCH_INGRESS m
+
+            echo "===== IFB CONFIGURATION ====="
+            grep -E 'CONFIG_(IFB|NET_CLS_ACT|NET_ACT_MIRRED|NET_SCH_INGRESS)' "$CONFIG_PATH"
+
+            echo "✅ IFB configuration patch applied."
+
             # 再次驗證 (★ 最終驗證同步相容 =y 或 =m)
             if grep -qE "CONFIG_NET_SCH_CAKE=[ym]" "$CONFIG_PATH"; then
                echo "🎉 CAKE Patch Applied Successfully!"
