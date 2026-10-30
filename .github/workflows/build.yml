@@ -2047,12 +2047,6 @@ jobs:
           echo "Starting build... Logs will be saved to build.log"
           set -o pipefail
           ./build_firmware.sh 2>&1 | tee build.log
-          ./clear_tree.sh > /dev/null 2>&1
-          rm -rf tmp staging
-          
-          echo "Starting build... Logs will be saved to build.log"
-          set -o pipefail
-          ./build_firmware.sh 2>&1 | tee build.log
 
           echo ""
           echo "=================================================="
