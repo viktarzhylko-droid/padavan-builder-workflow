@@ -2015,6 +2015,9 @@ jobs:
 
       # 8. 開始編譯
       - name: Build firmware
+
+      # 8. 開始編譯
+      - name: Build firmware
         run: |
           echo "::group::Build Process"
           cp build.config padavan-ng/trunk/.config
@@ -2026,7 +2029,17 @@ jobs:
           echo "Starting build... Logs will be saved to build.log"
           set -o pipefail
           ./build_firmware.sh 2>&1 | tee build.log
+
+          echo "===== VERIFY CAKE AND IFB MODULES ====="
+          find . -type f \
+            \( -name "sch_cake.ko" \
+            -o -name "ifb.ko" \
+            -o -name "act_mirred.ko" \
+            -o -name "sch_ingress.ko" \) -print
+          echo "===== MODULE CHECK FINISHED ====="
+
           echo "::endgroup::"
+
 
       # 9. 智慧打包與產物偵測 (含 iptables Debug 檔案)
       - name: Smart-Pack & Debug Collection
